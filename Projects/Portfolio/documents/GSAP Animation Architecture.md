@@ -2,10 +2,10 @@
 
 ## 목적
 
-React 환경에서 GSAP 애니메이션을 구현할 때 다음 문제를 방지하기 위해 구조를 분리한다.
+React 환경에서 GSAP 애니메이션을 구현할 때 다음 문제를 방지하기 위해 애니메이션 구조를 분리한다.
 
 - 컴포넌트 내부에 애니메이션 코드가 과도하게 쌓이는 문제
-- ScrollTrigger와 lifecycle 관리가 섞이는 문제
+- ScrollTrigger와 React lifecycle이 뒤섞이는 문제
 - 애니메이션 로직 재사용이 어려운 문제
 - 유지보수 시 수정 위치가 불명확한 문제
 
@@ -13,7 +13,7 @@ React 환경에서 GSAP 애니메이션을 구현할 때 다음 문제를 방지
 
 ```
 TSX → 언제 실행되는가 (scroll / lifecycle)
-animation.ts → 어떻게 움직이는가 (motion)
+animation.ts → 어떻게 움직이는가 (motion / gsap)
 ```
 
 ---
@@ -22,7 +22,7 @@ animation.ts → 어떻게 움직이는가 (motion)
 
 ## 1.1 TSX (React Component)
 
-React 컴포넌트는 **애니메이션 실행 시점과 스크롤 문맥**을 담당한다.
+React 컴포넌트는 **애니메이션 실행 시점과 스크롤 문맥을 관리한다.**
 
 ### 포함되는 것
 
@@ -51,15 +51,16 @@ useLayoutEffect(() => {
   if (!section) return;
 
   constctx = gsap.context(() => {
-    constrows = gsap.utils.toArray(".interview-row", section);
+    constrows = gsap.utils.toArray<HTMLElement>(".interview-row", section);
 
     rows.forEach((row) => {
-      gsap.fromTo(row, motion.row.from, {
-        ...motion.row.to,
-        scrollTrigger: {
-          trigger: row,
-          start: "top 85%",
-        },
+      consttween = interviewAnimation.row(row);
+
+      ScrollTrigger.create({
+        trigger: row,
+        start: "top 85%",
+        once: true,
+        animation: tween,
       });
     });
   }, section);
@@ -72,10 +73,14 @@ useLayoutEffect(() => {
 
 # 2. animation.ts (Animation Module)
 
-animation 파일은 **순수 애니메이션 모션 정의만 담당한다.**
+animation 파일은 **GSAP 모션 생성 로직을 담당한다.**
+
+여기서는 ScrollTrigger를 사용하지 않는다.
 
 ### 포함되는 것
 
+- `gsap.from`
+- `gsap.fromTo`
 - `opacity`
 - `x`
 - `y`
@@ -93,27 +98,35 @@ animation 파일은 **순수 애니메이션 모션 정의만 담당한다.**
 ### 예시
 
 ```tsx
-exportconstinterviewMotion = {
-  title: {
-    from: { autoAlpha: 0, y: 24 },
-    to: {
-      autoAlpha: 1,
-      y: 0,
-      duration: 0.8,
-      ease: "power2.out",
-    },
-  },
+import gsap from"gsap";
 
-  row: {
-    from: { autoAlpha: 0, y: 20 },
-    to: {
-      autoAlpha: 1,
-      y: 0,
-      duration: 0.7,
-      ease: "power2.out",
-    },
-  },
-};
+exportconstinterviewAnimation= {
+  title: (target:HTMLElement) =>
+gsap.fromTo(
+target,
+      { autoAlpha:0, y:24 },
+      {
+        autoAlpha:1,
+        y:0,
+        duration:0.8,
+        ease:"power2.out",
+        paused:true,
+      }
+    ),
+
+  row: (target:HTMLElement) =>
+gsap.fromTo(
+target,
+      { autoAlpha:0, y:20 },
+      {
+        autoAlpha:1,
+        y:0,
+        duration:0.7,
+        ease:"power2.out",
+        paused:true,
+      }
+    ),
+}asconst;
 ```
 
 animation.ts는 **ScrollTrigger를 알지 못한다.**
@@ -127,7 +140,7 @@ animation.ts는 **ScrollTrigger를 알지 못한다.**
 ### animation.ts에 넣지 말 것
 
 ```
-scrollTrigger
+ScrollTrigger
 trigger
 start
 end
@@ -163,8 +176,6 @@ animation.ts → 모션 정의
 
 예
 
-디자이너 요청
-
 ```
 애니메이션 속도를 조금 느리게 해주세요
 ```
@@ -188,15 +199,14 @@ animation.ts
 수정 위치
 
 ```
-TSX
-start 값 변경
+TSX (start 값 수정)
 ```
 
 ---
 
 ## 4.4 애니메이션 재사용 가능
 
-동일한 motion을 여러 섹션에서 사용할 수 있다.
+동일한 animation 함수를 여러 섹션에서 사용할 수 있다.
 
 예
 
@@ -220,9 +230,9 @@ src
  │       └ AboutInterview.tsx
  │
  ├ animations
- │   ├ interviewMotion.ts
- │   ├ heroMotion.ts
- │   └ projectMotion.ts
+ │   ├ interviewAnimation.ts
+ │   ├ heroAnimation.ts
+ │   └ projectAnimation.ts
  │
  └ data
      └ interviews.ts
@@ -236,8 +246,8 @@ src
 
 레이아웃 기반 애니메이션에서는 `useLayoutEffect`가 안정적이다.
 
-```
-useLayoutEffect
+```tsx
+useLayoutEffect;
 ```
 
 ---
@@ -263,7 +273,7 @@ gsap.context(..., sectionRef)
 컴포넌트 unmount 시 애니메이션을 제거해야 한다.
 
 ```
-return () => ctx.revert();
+return () =>ctx.revert();
 ```
 
 ---
@@ -274,7 +284,7 @@ return () => ctx.revert();
 
 ```
 스크롤 문맥 = React 책임
-모션 표현 = Animation 책임
+모션 생성 = Animation 책임
 ```
 
 즉
@@ -303,3 +313,5 @@ HOW → Animation Module
 TSX → 언제 실행되는가
 animation.ts → 어떻게 움직이는가
 ```
+
+이 규칙을 유지하면 애니메이션 구조가 **확장 가능하고 유지보수 가능한 형태**로 유지된다.
