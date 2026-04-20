@@ -234,3 +234,8 @@
 
 > 사용자와 분리된 시스템이 아니라,
 > 사용자 자신처럼 느껴지는 도구
+
+## References
+
+1. Apple Inc., “Designing Fluid Interfaces,” WWDC 2018, Session 803.  
+   Available: https://developer.apple.com/videos/play/wwdc2018/803/?utm_source=chatgpt.com
