@@ -238,4 +238,4 @@
 ## References
 
 1. Apple Inc., “Designing Fluid Interfaces,” WWDC 2018, Session 803.  
-   Available: https://developer.apple.com/videos/play/wwdc2018/803/?utm_source=chatgpt.com
+   Available: https://developer.apple.com/videos/play/wwdc2018/803/
