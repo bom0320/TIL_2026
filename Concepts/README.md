@@ -1,63 +1,145 @@
 # Concept Notes
 
-프론트엔드 개발 과정에서 학습한 핵심 개념을 정리한 공간입니다.
+프론트엔드 개발에 필요한 핵심 개념을 주제별로 정리한 공간입니다.
 
-단순히 정의를 기록하는 데 그치지 않고, 각 개념을 왜 사용하는지, 어떤 흐름으로 동작하는지, 실제 개발에서는 어떻게 적용되는지를 함께 정리합니다.
+단순히 개념의 정의만 기록하는 것이 아니라, 해당 개념이 필요한 이유와 동작 원리, 실제 예시, 주의할 점까지 이해하는 것을 목적으로 합니다.
 
-각 문서는 다음 기준으로 작성합니다.
+## 문서 작성 형식
 
-- 한 줄 정의
-- 왜 사용하는가?
-- 핵심 개념
-- 동작 흐름
-- 예시
-- 장점
-- 주의할 점
-- 면접 답변
-- 관련 개념
+각 개념 노트는 다음 순서로 작성합니다.
+
+1. 한 줄 정의
+2. 왜 사용하는가?
+3. 핵심 개념
+4. 동작 흐름
+5. 예시
+6. 장점
+7. 주의할 점
+8. 면접 답변
+9. 관련 개념
 
 ---
 
 ## Architecture
 
-애플리케이션의 구조와 책임 분리, 설계 방식에 관한 개념을 정리합니다.
+애플리케이션의 구조와 책임 분리, 코드 구성 및 설계 방식에 관한 개념을 정리합니다.
+
+### 포함되는 개념
 
 - [MVC](./Architecture/mvc.md)
+- 디자인 패턴
+- 계층형 아키텍처
+- FSD
+- 모놀리식 아키텍처와 마이크로서비스 아키텍처
 
 ---
 
 ## Network
 
-클라이언트와 서버 간 통신, HTTP, API 설계와 관련된 개념을 정리합니다.
+클라이언트와 서버의 통신 방식, HTTP 프로토콜과 인증 및 API 설계에 관한 개념을 정리합니다.
+
+### 포함되는 개념
 
 - [REST API](./Network/rest-api.md)
+- HTTP
+- HTTPS
+- CORS
+- 쿠키와 세션
+- JWT
+- HTTP 상태 코드
 
 ---
 
 ## Framework
 
-프레임워크의 특징과 사용 이유, 렌더링 방식과 관련된 개념을 정리합니다.
+프레임워크의 역할과 특징, 웹 애플리케이션의 렌더링 및 라우팅 방식에 관한 개념을 정리합니다.
+
+### 포함되는 개념
 
 - [Next.js를 사용하는 이유](./Framework/why-nextjs.md)
+- 라이브러리와 프레임워크의 차이
+- CSR, SSR, SSG, ISR
+- App Router
+
+---
+
+## Browser
+
+브라우저가 웹 문서를 해석하고 화면을 그리는 과정과 브라우저 내부 동작에 관한 개념을 정리합니다.
+
+### 포함되는 개념
+
+- 브라우저 렌더링 과정
+- DOM과 CSSOM
+- 이벤트 루프
+- 리플로우와 리페인트
+- 웹 스토리지
+
+---
+
+## JavaScript
+
+JavaScript 언어의 동작 원리와 실행 환경, 객체 및 타입 시스템에 관한 개념을 정리합니다.
+
+### 포함되는 개념
+
+- 실행 컨텍스트
+- 클로저
+- 호이스팅
+- 프로토타입
+- `this`
+- 타입 변환
+
+---
+
+## React
+
+React의 렌더링 원리와 상태 관리, 컴포넌트 동작 방식에 관한 개념을 정리합니다.
+
+### 포함되는 개념
+
+- Virtual DOM
+- 상태와 렌더링
+- `useEffect`
+- 제어 컴포넌트
+- 서버 상태와 클라이언트 상태
 
 ---
 
 ## Development Process
 
-개발, 테스트, 배포, 협업 과정에서 사용하는 개념과 업무 흐름을 정리합니다.
+기능 개발 이후 테스트와 검수, 협업, 배포까지 이어지는 개발 업무 과정에 관한 개념을 정리합니다.
+
+### 포함되는 개념
 
 - [QA](./Development-Process/qa.md)
 - [배포 프로세스](./Development-Process/deployment-process.md)
+- CI/CD
+- 코드 리뷰
+- 테스트
+- 애자일
 
 ---
 
-## 추가 예정
+## 폴더 구조
 
-앞으로 학습하는 개념에 따라 다음 카테고리를 추가할 수 있습니다.
+```text
+Concept/
+├─ Architecture/
+├─ Network/
+├─ Framework/
+├─ Browser/
+├─ JavaScript/
+├─ React/
+├─ Development-Process/
+└─ README.md
+```
 
-- Browser
-- JavaScript
-- React
-- Testing
-- Security
-- Performance
+새로운 개념을 학습할 때는 개념의 성격에 맞는 폴더에 Markdown 파일을 추가합니다.
+
+```text
+Concept/Browser/browser-rendering.md
+Concept/JavaScript/execution-context.md
+Concept/React/virtual-dom.md
+Concept/Development-Process/ci-cd.md
+```
