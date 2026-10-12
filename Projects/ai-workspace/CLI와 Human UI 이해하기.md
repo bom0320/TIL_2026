@@ -482,7 +482,384 @@ Telemetry
 
 등을 직접 확인하기 쉽다.
 
----
+---현재 브랜치의 v1 Goal-to-Task Planning 구현을 기준으로
+CLI Human Interface 구조를 아래 형태까지 정리해줘.
+
+목표 구조:
+
+src/
+├─ cli/
+│ ├─ cli.ts
+│ │
+│ ├─ commands/
+│ │ ├─ plan.ts
+│ │ └─ execute.ts
+│ │
+│ ├─ prompts/
+│ │ ├─ ask-goal.ts
+│ │ └─ approve-task.ts
+│ │
+│ └─ presenters/
+│ └─ task-contract.ts
+│
+├─ application/
+│ ├─ planning/
+│ └─ execution/
+│
+├─ contracts/
+├─ infrastructure/
+└─ services/
+
+이번 작업의 목적은 새로운 기능을 크게 추가하는 것이 아니라,
+현재 CLI 책임을 더 명확하게 분리하고 v1의 Human Interface를 최소한으로 완성하는 것이다.
+
+중요:
+
+- application/planning, application/execution 내부 로직은 불필요하게 수정하지 말 것
+- planTask(), executeTask() 등 기존 public API는 유지할 것
+- 새로운 workflow/orchestrator/controller 계층을 추가하지 말 것
+- 새로운 UI 라이브러리나 dependency를 추가하지 말 것
+- fancy TUI는 만들지 말 것
+- CLI는 application의 adapter 역할만 유지할 것
+
+## 1. prompts/ask-goal.ts 추가
+
+현재 repositoryPath와 objective를 CLI argument로만 받는 흐름을
+interactive CLI에서도 입력받을 수 있도록 만들어줘.
+
+역할:
+
+- Repository path 입력
+- Goal / Objective 입력
+- 입력값 반환
+
+예상 UX:
+
+AI Workspace
+
+Repository:
+
+> .
+
+Goal:
+
+> README 프로젝트 설명을 더 명확하게 수정해줘
+
+Node의 readline/promises 등 built-in API를 우선 사용해줘.
+
+반환 타입은 명확하게 정의해줘.
+
+예:
+
+type GoalInput = {
+repositoryPath: string;
+objective: string;
+};
+
+입력값은 trim 처리하고,
+빈 값은 허용하지 않게 해줘.
+
+단,
+기존 CLI argument 기반 실행 경로가 테스트나 개발 용도로 필요하다면
+완전히 제거하지 말고 재사용 가능한 형태로 유지해줘.
+
+예를 들어:
+
+pnpm dev . "README 설명 수정"
+
+도 가능하고,
+
+pnpm dev
+
+만 실행하면 askGoal()로 interactive input을 받는 구조면 좋다.
+
+## 2. presenters/task-contract.ts 추가
+
+현재 approve-task.ts 또는 cli.ts에서 직접:
+
+console.log(JSON.stringify(task, null, 2))
+
+하고 있는 TaskContract 출력 책임을 분리해줘.
+
+예:
+
+presentTaskContract(task)
+
+역할:
+
+- TaskContract를 Human이 확인할 수 있게 출력
+- 출력만 담당
+- 입력이나 승인 판단은 하지 않음
+
+최소한 아래 항목이 확인 가능해야 함:
+
+- Objective
+- Target Repository
+- Allowed Paths
+- Forbidden Paths
+- Constraints
+- Acceptance Criteria
+- Verification
+
+JSON 그대로 출력해도 되지만,
+가능하면 현재 구조를 복잡하게 만들지 않는 범위에서
+사람이 읽기 쉬운 형태로 출력해줘.
+
+중요:
+
+Presenter는
+"보여주기"만 담당한다.
+
+## 3. prompts/approve-task.ts 책임 축소
+
+현재 approveTask()가 TaskContract 출력과 승인 입력을 같이 담당하고 있다면 분리해줘.
+
+변경 후:
+
+presentTaskContract(task)
+= TaskContract 출력
+
+approveTask()
+= Approve / Reject 입력만 담당
+
+예:
+
+Execute this task?
+Type "Approve" to continue, anything else to reject:
+
+>
+
+또는 비슷한 단순한 UX면 충분하다.
+
+반환:
+
+Promise<boolean>
+
+Approve인 경우에만 true.
+
+그 외 입력은 false.
+
+## 4. cli.ts 정리
+
+cli.ts는 전체 terminal flow를 읽기 쉽게 연결하는 역할만 하게 해줘.
+
+개념적으로:
+
+runCli()
+↓
+Goal 입력 확보
+↓
+runPlanCommand(...)
+↓
+PlanningResult 확인
+↓
+presentTaskContract(...)
+↓
+approveTask()
+↓
+승인 시 runExecuteCommand(...)
+↓
+Execution Result
+
+코드는 가능한 다음과 같이 읽히게 해줘:
+
+const input = await ...
+const planning = await ...
+presentTaskContract(...)
+const approved = await ...
+if (!approved) ...
+await runExecuteCommand(...)
+
+즉 cli.ts 안에:
+
+- Goal validation 세부 구현
+- TaskContract formatting
+- readline 구현
+- Execution 세부 로직
+
+을 직접 넣지 말 것.
+
+## 5. commands/plan.ts
+
+현재 역할을 유지하되,
+interactive input과 argument input 모두에서 재사용할 수 있게 정리해줘.
+
+역할:
+
+GoalInput
+→ GoalSpec 생성/검증
+→ planTask() 호출
+→ PlanningResult 반환
+
+가능하면 string[] argv에 지나치게 종속되지 않게 해줘.
+
+예를 들어:
+
+runPlanCommand({
+repositoryPath,
+objective,
+})
+
+형태가 더 자연스럽다면 그렇게 리팩토링해도 된다.
+
+단,
+기존 테스트와 CLI 호환성을 고려해서 과도하게 바꾸지는 말 것.
+
+## 6. commands/execute.ts
+
+현재 v0 호환성을 유지해줘.
+
+두 경로 모두 가능해야 한다.
+
+v0:
+TaskContract JSON file
+→ loadTaskContract()
+→ runExecuteCommand()
+
+v1:
+PlanningResult.task
+→ runExecuteCommand()
+
+즉 기존 Execution 단독 실행/테스트 경로는 삭제하지 말 것.
+
+## 7. 테스트
+
+아래 동작을 검증해줘.
+
+1. askGoal()
+
+- repository path 입력 가능
+- objective 입력 가능
+- 빈 입력 처리
+
+2. presentTaskContract()
+
+- 주요 TaskContract 정보가 출력되는지
+
+3. approveTask()
+
+- Approve → true
+- Reject 또는 기타 입력 → false
+
+4. runCli()
+
+- arguments가 있으면 기존 방식으로 Planning 가능
+- arguments가 없으면 interactive Goal input 사용
+- Planning 실패 시 Approval/Execution 시작 안 함
+- Reject 시 Execution 시작 안 함
+- Approve 시 PlanningResult.task가 그대로 Execution으로 전달됨
+
+5. 기존 v0 execution CLI 테스트 유지
+
+6. 기존 planning 테스트 유지
+
+## 8. 현재 v1의 책임 경계
+
+아래 원칙을 유지해줘.
+
+cli/
+= Human과 terminal 사이의 interface
+
+commands/
+= application use-case 호출
+
+prompts/
+= Human input / Human decision
+
+presenters/
+= Human-readable output
+
+application/
+= 실제 Planning / Execution logic
+
+즉:
+
+CLI
+→ Application을 호출
+
+Application
+→ CLI를 모름
+
+방향을 유지할 것.
+
+## 9. 이번 작업에서 하지 않을 것
+
+- Web UI
+- CEO Agent
+- Multi-Agent
+- Conflict / Agreement
+- Retry / Re-plan
+- Revise approval flow
+- Persistent state
+- 새로운 architecture layer
+- 새로운 dependency
+- 복잡한 terminal UI
+
+이번 범위는 v1 Human Interface 최소 구조까지만이다.
+
+## 10. 최종 기대 흐름
+
+pnpm dev
+
+실행 시:
+
+AI Workspace
+
+Repository:
+
+> .
+
+Goal:
+
+> README 설명을 더 명확하게 수정해줘
+
+Planning...
+
+Task Contract
+...
+
+Execute this task?
+
+> Approve
+
+Execution...
+
+Verification: passed
+
+형태로 동작할 수 있게 만들어줘.
+
+기존 argument 실행도 가능하면 유지:
+
+pnpm dev . "README 설명을 더 명확하게 수정해줘"
+
+작업 전 현재:
+
+- src/cli/cli.ts
+- src/cli/commands/plan.ts
+- src/cli/commands/execute.ts
+- src/cli/prompts/approve-task.ts
+- package.json
+- 관련 테스트
+
+를 먼저 읽고 현재 구현을 최대한 재사용해줘.
+
+작업 후 실행:
+
+pnpm typecheck
+pnpm test
+git diff --check
+
+마지막 보고 형식:
+
+1. 변경된 파일
+2. 새 CLI 구조
+3. ask-goal 역할
+4. presenter 분리 내용
+5. approve-task 책임 변경
+6. cli.ts 실행 흐름
+7. v0 호환성 유지 방식
+8. 테스트 결과
+9. 남아 있는 주의점
 
 # 10. 버전별 CLI / Human UI 발전 방향
 
